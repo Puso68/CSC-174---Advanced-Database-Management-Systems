@@ -1,0 +1,7 @@
+/* Drop all the tables in the schema */
+
+drop table DOWNTIME;
+drop table EQUIPMENT;
+drop table DEPARTMENT;
+drop table UNSCHEDULED;
+drop view SCHEDULED;

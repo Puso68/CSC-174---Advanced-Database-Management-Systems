@@ -1,0 +1,59 @@
+insert into DEPARTMENT
+values(1008, 'Filling', 'Brian', 'Hollingsworth');
+
+insert into DEPARTMENT
+values(2009, 'Packaging', 'Rick', 'Oneal');
+
+insert into DEPARTMENT
+values(3010, 'Dilution', 'Meena', 'Sharma');
+
+
+/**************************************************/
+
+insert into EQUIPMENT
+values(1212, 'PFML1', 2009);
+
+insert into EQUIPMENT
+values(1213, 'PFML2', 2009);
+
+insert into EQUIPMENT
+values(1810, 'FR3', 1008);
+
+insert into EQUIPMENT
+values(1820, 'FR4', 1008);
+
+insert into EQUIPMENT
+values(1550, 'DL1', 3010);
+
+insert into EQUIPMENT
+values(1551, 'DL2', 3010);
+
+
+/**************************************************/
+
+insert into DOWNTIME
+values('LYP', 30, 'Day', 'Unscheduled', null, null, 'VIS failure', 1810);
+
+insert into DOWNTIME
+values('STP', 40, 'Day', 'Unscheduled', null, null, 'Belt failure', 1820);
+
+
+insert into DOWNTIME
+values('ABC', 100, 'Day', 'Scheduled', 083000, 090000, null, 1212);
+
+insert into DOWNTIME
+values('DCD', 150, 'Swing', 'Scheduled', 14000, 160000, null, 1550);
+
+insert into DOWNTIME
+values('GHJ', 240, 'Grave', 'Scheduled', 010000, 050000, null, 1550);
+
+
+-- ERROR
+insert into DOWNTIME
+values('AAA', 40, 'Day', 'Unscheduled', 062300, 070300, 'VIS failure', 1810);
+
+insert into DOWNTIME
+values('BBB', 40, 'Day', 'Unscheduled', null, 070300, 'VIS failure', 1810);
+
+insert into DOWNTIME
+values('CCC', 40, 'Day', 'Unscheduled', 062300, null, 'VIS failure', 1810);

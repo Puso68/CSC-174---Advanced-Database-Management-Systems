@@ -1,0 +1,23 @@
+update DOWNTIME
+set initial = 'LYP'
+where initial='PLY';
+
+
+update DOWNTIME
+set initial = 'PLY'
+where initial='LYP';
+
+update DOWNTIME
+set time = 150
+where initial='ABC';
+
+
+update DOWNTIME
+set plan_start = '073000'
+where initial='ABC';
+
+--ERROR--
+
+update DOWNTIME
+set plan_start = '083000'
+where initial='LYP';

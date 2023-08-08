@@ -1,0 +1,168 @@
+/**** MySQL 5.7.38 ****/
+
+create table DEPARTMENT
+(
+dept_num int not null, 
+dept_name varchar(10),
+mgr_fname varchar(30),
+mgr_lname varchar(30),
+primary key(dept_num)
+);
+
+create table EQUIPMENT
+(
+part_num int not null,
+part_name varchar(30),
+dept_num int,
+primary key(part_num),
+foreign key(dept_num) references DEPARTMENT(dept_num)
+);
+
+create table DOWNTIME
+(
+-- technicians will each have unique three letter initials
+initial char(3) not null,
+-- time in minutes
+time int,
+-- there are three shifts: day, swing, grave 
+shift varchar(5),
+
+downtime_type enum('Scheduled', 'Unscheduled'), 
+-- no downtime, make downtime_type null
+-- if downtime_type is null make plan_start/stop and cause into null
+-- if downtime_type is ‘Scheduled’ then cause is null
+-- if downtime_type is “Unscheduled’ then plan_start/stop are both nulll
+
+-- plan_start/stop format is HH:MM:SS
+plan_start time,
+plan_stop time,
+cause varchar(30),
+equipment_num int,
+primary key(initial),
+foreign key(equipment_num) references EQUIPMENT(part_num)
+);
+
+/**** Named Query ****/
+
+create view SCHEDULED as
+select initial, time, shift, plan_start, plan_stop
+from DOWNTIME
+where downtime_type = 'Scheduled';
+
+/**** Materialized View ****/
+
+create table UNSCHEDULED
+(
+Select initial, time, shift, cause
+from DOWNTIME
+where downtime_type='Unscheduled'
+);
+
+/********* Triggers *********/
+
+--------- insert ---------
+
+delimiter $$
+create trigger after_insert_unscheduled
+after insert on DOWNTIME
+for each row
+begin
+
+	if new.downtime_type='Unscheduled'
+	and new.plan_start is not null
+	then 
+	signal sqlstate '45000'
+	set message_text ='Invalid entry.';
+	elseif new.downtime_type='Unscheduled'
+	and new.plan_stop is not null
+	then 
+	signal sqlstate '45000'
+	set message_text ='Invalid entry.';	
+	end if;
+
+	if new.downtime_type='Unscheduled'
+	and new.plan_start is null
+	and new.plan_stop is null
+	then
+	insert into UNSCHEDULED
+	values(new.initial, new.time, new.shift, new.cause);
+	end if;
+
+end $$
+delimiter ;
+
+--------- update ---------
+
+delimiter $$
+create trigger after_update_unscheduled
+after update on DOWNTIME
+for each row
+begin
+	if new.downtime_type='Unscheduled'
+	and new.plan_start is not null
+	then 
+	signal sqlstate '45000'
+	set message_text = 
+	'Cannot update: plan_start has to be null for Unscheduled';
+	
+	elseif new.downtime_type='Unscheduled'
+	and new.plan_stop is not null
+	then
+	signal sqlstate '45000'
+	set message_text = 
+	'Cannot update: plan_stop has to be null for Unscheduled';	
+	
+	elseif new.downtime_type='Unscheduled'
+	then
+	delete from UNSCHEDULED where initial=old.initial;
+	insert into UNSCHEDULED
+	values(new.initial, new.time, new.shift, new.cause);
+	end if;
+end $$
+delimiter ;
+
+--------- delete ---------
+
+delimiter $$
+create trigger after_delete_unscheduled
+after delete on DOWNTIME
+for each row
+begin
+	if old.downtime_type='Unscheduled'
+	then
+	delete from UNSCHEDULED
+	where initial=old.initial;
+	end if;
+end $$
+delimiter ;
+
+/********** Function **********/
+-- get total down time for each shift
+
+delimiter &&
+create function shift_total_downtime(shift varchar(5))
+returns int
+begin
+declare num int default 0;
+
+if shift='day' then
+select sum(time) into num
+from DOWNTIME
+where DOWNTIME.shift='Day';
+
+elseif shift='swing' then
+select sum(time) into num
+from DOWNTIME
+where DOWNTIME.shift='Swing';
+
+elseif shift='Grave' then
+select sum(time) into num
+from DOWNTIME
+where DOWNTIME.shift='Grave';
+end if;
+
+return num;
+
+end &&
+delimiter ;
+

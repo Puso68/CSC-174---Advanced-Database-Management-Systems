@@ -1,0 +1,132 @@
+/********* Part 1: create the tables *********/
+
+create table CUSTOMER
+(
+CID int not null,
+primary key(CID)
+);
+
+create table BOAT
+(
+VID int not null,
+name varchar(20),
+yearBuilt YEAR, -- format: YYYY
+boatType enum('YACHT', 'CARGO'),
+numBeds int,
+TEUs int,
+primary key(VID)
+);
+
+create table RENTS
+(
+CID int not null,
+VID int not null,
+
+-- format: YYYY-MM-DD
+rentalDate date,
+returnDate date,
+
+primary key(CID, VID),
+foreign key(CID) references CUSTOMER(CID),
+foreign key(VID) references BOAT(VID)
+);
+
+/********** Part 2: named query **********/
+
+create view YACHT as
+select *
+from BOAT
+where boatType='YACHT';
+
+/********** Part 3: materialized view **********/
+
+create table CARGOSHIP
+(
+select *
+from BOAT
+where boatType='CARGO'
+);
+
+/********** Part 4: up to date trigger **********/
+
+delimiter $$
+create trigger after_insert_cargoship
+after insert on BOAT
+for each row
+begin
+	if new.boatType='CARGO'
+	and new.numBeds is not null
+	then 
+	signal sqlstate '45000'
+	set message_text ='Invalid entry.';
+	end if;
+
+	if new.boatType='CARGO'
+	and new.numBeds is null
+	then
+	insert into CARGOSHIP
+	values(new.VID, new.name, new.yearBuilt, 
+	new.boatType, new.numbeds, new.TEUs);
+	end if;
+
+end $$
+delimiter ;
+
+delimiter $$
+create trigger after_update_cargoship
+after update on BOAT
+for each row
+begin
+	if new.boatType<>old.boatType or
+	new.numBeds is not null
+	then 
+	signal sqlstate '45000'
+	set message_text = 'Cannot update: do not
+	change boatType or numBeds.';
+	else
+	delete from CARGOSHIP where VID=old.VID;
+	insert into CARGOSHIP
+	values(new.VID, new.name, new.yearBuilt, 
+	new.boatType, new.numbeds, new.TEUs);
+	end if;
+end $$
+delimiter ;
+
+delimiter $$
+create trigger after_delete_cargoship
+after delete on BOAT
+for each row
+begin
+	delete from CARGOSHIP
+	where VID=old.VID;
+end $$
+
+delimiter ;
+
+/********** Part 5: function **********/
+
+delimiter &&
+create function TEST(type varchar(5))
+returns int
+begin
+declare num int default 0;
+
+if type='cargo' then
+select count(*) into num
+from BOAT
+where boatType='CARGO';
+elseif type='yacht' then
+select count(*) into num
+from BOAT
+where boatType='YACHT';
+elseif type='other' then
+select count(*) into num
+from BOAT
+where boatType is null;
+end if;
+
+return num;
+
+end &&
+delimiter ;
+

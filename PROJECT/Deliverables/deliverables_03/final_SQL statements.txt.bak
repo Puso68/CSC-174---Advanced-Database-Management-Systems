@@ -1,0 +1,94 @@
+/**** MySQL 5.7.38 ****/
+
+create table DEPARTMENT
+(
+dept_num int not null, 
+dept_name varchar(10),
+mgr_fname varchar(30),
+mgr_lname varchar(30),
+primary key(dept_num)
+);
+
+create table EQUIPMENT
+(
+part_num int not null,
+part_name varchar(30),
+dept_num int,
+primary key(part_num),
+foreign key(dept_num) references DEPARTMENT(dept_num)
+);
+
+create table DOWNTIME
+(
+-- technicians will each have unique three letter initials
+initial char(3) not null,
+-- time in minutes
+time int,
+-- there are three shifts: day, swing, grave 
+shift varchar(5),
+
+downtime_type enum('Scheduled', 'Unscheduled'), 
+-- no downtime, make downtime_type null
+-- if downtime_type is null make plan_start/stop and cause into null
+-- if downtime_type is ‘Scheduled’ then cause is null
+-- if downtime_type is “Unscheduled’ then plan_start/stop are both nulll
+
+-- plan_start/stop format is HH:MM:SS
+plan_start time,
+plan_stop time,
+cause varchar(30),
+equipment_num int,
+primary key(initial),
+foreign key(equipment_num) references EQUIPMENT(part_num)
+);
+
+/**** Named Query ****/
+
+create view SCHEDULED as
+select initial, time, shift, cause
+from DOWNTIME
+where downtime_type = 'Scheduled';
+
+/**** Materialized View ****/
+
+create table UNSCHEDULED
+(
+Select initial, time, shift, plan_start, plan_stop
+from DOWNTIME
+where downtime_type = 'Unscheduled'
+);
+
+/**** Triggers ****/
+
+delimiter $$
+create trigger before_insert_unscheduled
+before insert on DOWNTIME
+for each row
+begin
+	if new.downtime_type='Unscheduled'
+	and new.plan_start is not null
+	then 
+	signal sqlstate '45000'
+	set message_text =
+	'plan_start and plan_stop should be null if the downtime_type is Unscheduled';
+	
+	elseif new.downtime_type='Unscheduled'
+	and new.plan_stop is not null
+	then
+	signal sqlstate '45000'
+	set message_text =
+	'plan_start and plan_stop should be null if the downtime_type is Unscheduled';
+	end if;
+	
+	if new.downtime_type='Unscheduled'
+	and new.plan_start is null
+	and new.plan_stop is null
+	then
+	insert into DOWNTIME
+	values(new.initial, new.time, new.shift, new.downtime_type,
+	new.plan_start, new.plan_stop, new.cause, new.equipment_num);
+	end if;
+
+end $$
+delimiter ;
+

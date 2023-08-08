@@ -1,0 +1,14 @@
+<html>
+<body>
+Type in your unscheduled downtime:<br><br>
+<form action="end.php" method="get">
+Initial (3 letters): <input type="text" name="initial"><br>
+Time(minutes): <input type="text" name="time"><br>
+Shift: <input type="text" name="shift"><br>
+Cause: <input type="text" name="cause"><br>
+<input type="submit">
+</form>
+
+</body>
+</html>
+

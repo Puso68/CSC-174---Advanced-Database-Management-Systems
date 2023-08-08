@@ -1,0 +1,24 @@
+insert into BOAT
+values(12345, 'who', 1985, 'CARGO', null, 50);
+
+insert into BOAT
+values(12347, 'where', 1970, 'CARGO', null, 80);
+
+insert into BOAT
+values(12350, 'whaz', 1975, 'CARGO', null, 100);
+
+insert into BOAT
+values(12348, 'why', 1985, 'YACHT', 10, null);
+
+insert into BOAT
+values(12346, 'when', 1999, 'YACHT', 8, null);
+
+insert into BOAT
+values(12349, 'how', 2022, null, null, null);
+
+
+
+/*************** ERROR ***************/
+
+insert into BOAT
+values(98765, 'error', 1999, 'CARGO', 2, 80);
